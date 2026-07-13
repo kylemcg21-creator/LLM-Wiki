@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and dev dependencies
+        run: pip install -e ".[dev,mcp]"
+
+      - name: Verify AGENTS.md sync
+        run: python scripts/sync_agents.py && git diff --exit-code
+
+      - name: Ruff check
+        run: ruff check src tests
+
+      - name: Ruff format
+        run: ruff format --check src tests
+
+      - name: Pytest
+        run: pytest -v
+
+      - name: Lint example wikis (must have zero errors)
+        run: |
+          wiki --root examples/demo lint --severity error
+          wiki --root examples/research lint --severity error
+          wiki --root examples/reading lint --severity error
+          wiki --root examples/business lint --severity error
+
+      - name: Demo walkthrough script
+        run: chmod +x scripts/demo-walkthrough.sh && ./scripts/demo-walkthrough.sh
+
+      - name: Verify package build
+        run: |
+          pip install hatch
+          hatch build
+          pip install dist/llm_wiki-*.whl
+          wiki --version
+          wiki init /tmp/test-wiki --name ci-wiki
+          wiki --root /tmp/test-wiki init-check
+          test -f /tmp/test-wiki/.windsurf/mcp.json
+          test -f /tmp/test-wiki/.opencode/mcp.json
