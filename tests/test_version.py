@@ -1,6 +1,10 @@
+import sys
 from pathlib import Path
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 from llm_wiki import __version__  # noqa: I001
 
