@@ -47,10 +47,6 @@ Changelog = "https://github.com/cobusgreyling/llm-wiki/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/llm_wiki"]
-only-include = ["src/llm_wiki"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/llm_wiki/scaffold" = "llm_wiki/scaffold"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
