@@ -78,10 +78,30 @@ Open `examples/demo/` as an Obsidian vault to explore the live graph.
 
 ### 1. Install
 
+**LLM Wiki toolkit:**
+
 ```bash
 pip install llm-wiki
 pip install "llm-wiki[mcp]"   # optional: MCP server for agents
 ```
+
+**Optional: NeuroLink integration**
+
+For multi-provider LLM support, install [NeuroLink](https://github.com/juspay/neurolink) — a universal AI integration platform supporting 30+ providers:
+
+```bash
+pnpm add @juspay/neurolink
+# or
+npm install @juspay/neurolink
+```
+
+NeuroLink enables:
+- Automatic provider fallback (e.g., OpenAI → Anthropic)
+- Cost-aware routing across providers
+- Unified API for OpenAI, Anthropic, Google, AWS Bedrock, and 25+ others
+- Multimodal support (voice, images, PDFs, CSVs, 50+ file types)
+- RAG integration with 10+ chunking strategies
+- 58+ MCP server integrations
 
 ### 2. Scaffold a new wiki
 
