@@ -103,6 +103,20 @@ NeuroLink enables:
 - RAG integration with 10+ chunking strategies
 - 58+ MCP server integrations
 
+**Optional: Graphify integration**
+
+To explore a codebase or a `raw/` folder of sources as a force-directed
+graph before ingesting, install [Graphify](https://github.com/Graphify-Labs/graphify):
+
+```bash
+uv tool install graphifyy      # install the CLI (or: pipx install graphifyy)
+graphify install               # register the skill with your AI assistant
+```
+
+Then in your assistant, run `/graphify .` to get an interactive
+`graph.html`, a `GRAPH_REPORT.md` summary, and a queryable `graph.json`.
+See [GRAPHIFY_INSTALLATION.md](GRAPHIFY_INSTALLATION.md) for details.
+
 ### 2. Scaffold a new wiki
 
 ```bash
