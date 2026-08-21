@@ -103,7 +103,7 @@ def test_cli_new_page_with_force(tmp_path: Path):
     """Should allow overwriting with --force flag."""
     # Setup a temporary wiki
     (tmp_path / "AGENTS.md").write_text("# Agent")
-    (tmp_path / "templates" / "entity.md").mkdir(parents=True)
+    (tmp_path / "templates").mkdir(parents=True)
     (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
     (tmp_path / "wiki" / "entities").mkdir(parents=True)
     (tmp_path / "wiki" / "entities" / "test.md").write_text("# Old")
