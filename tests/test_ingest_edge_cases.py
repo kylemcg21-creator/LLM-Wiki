@@ -235,9 +235,7 @@ class TestIngestStatusCategories:
 
         # Incomplete: source page with no raw_file field
         incomplete_fm = "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n---"
-        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(
-            incomplete_fm
-        )
+        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(incomplete_fm)
 
         # Orphan: source page referencing nonexistent raw file
         orphan_fm = (
