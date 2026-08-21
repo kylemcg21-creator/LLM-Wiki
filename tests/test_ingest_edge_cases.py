@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from llm_wiki.ingest import get_ingest_status
 
 
@@ -105,9 +103,11 @@ class TestIngestFrontmatterHandling:
     def test_ingest_source_empty_raw_file_field(self, tmp_path: Path):
         """Should mark source as incomplete if raw_file is empty."""
         (tmp_path / "wiki" / "sources").mkdir(parents=True)
-        (tmp_path / "wiki" / "sources" / "source.md").write_text(
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: \n---\n\nContent"
+        empty_fm = (
+            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "raw_file: \n---\n\nContent"
         )
+        (tmp_path / "wiki" / "sources" / "source.md").write_text(empty_fm)
 
         statuses = get_ingest_status(tmp_path)
         incomplete = [s for s in statuses if s.status == "incomplete"]
@@ -129,9 +129,11 @@ class TestIngestFrontmatterHandling:
         (tmp_path / "raw").mkdir()
         (tmp_path / "raw" / "paper.md").write_text("content")
         (tmp_path / "wiki" / "sources").mkdir(parents=True)
-        (tmp_path / "wiki" / "sources" / "paper.md").write_text(
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: paper.md\n---\n\nContent"
+        valid_fm = (
+            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "raw_file: paper.md\n---\n\nContent"
         )
+        (tmp_path / "wiki" / "sources" / "paper.md").write_text(valid_fm)
 
         statuses = get_ingest_status(tmp_path)
         assert any(s.status == "ingested" and s.raw_file == "paper.md" for s in statuses)
@@ -187,9 +189,11 @@ class TestIngestOrphanDetection:
     def test_ingest_detects_orphan_sources(self, tmp_path: Path):
         """Should detect source pages that reference nonexistent raw files."""
         (tmp_path / "wiki" / "sources").mkdir(parents=True)
-        (tmp_path / "wiki" / "sources" / "orphan.md").write_text(
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: missing-file.md\n---\n\nContent"
+        orphan_fm = (
+            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "raw_file: missing-file.md\n---\n\nContent"
         )
+        (tmp_path / "wiki" / "sources" / "orphan.md").write_text(orphan_fm)
 
         statuses = get_ingest_status(tmp_path)
         assert any(s.status == "orphan" and s.source_page == "sources/orphan.md" for s in statuses)
@@ -198,8 +202,12 @@ class TestIngestOrphanDetection:
         """Should detect multiple orphaned sources."""
         (tmp_path / "wiki" / "sources").mkdir(parents=True)
         for i in range(3):
+            multi_orphan_fm = (
+                "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+                f"raw_file: missing-{i}.md\n---\n\nContent"
+            )
             (tmp_path / "wiki" / "sources" / f"orphan-{i}.md").write_text(
-                f"---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: missing-{i}.md\n---\n\nContent"
+                multi_orphan_fm
             )
 
         statuses = get_ingest_status(tmp_path)

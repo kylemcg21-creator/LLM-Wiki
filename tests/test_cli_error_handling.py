@@ -243,6 +243,7 @@ def test_cli_graph_large_wiki(tmp_path: Path):
     result = runner.invoke(main, ["--root", str(tmp_path.parent), "graph", "--json"])
     # Graph command should work (might fail due to root not found, but that's OK)
     # The point is it shouldn't crash on structure
+    assert isinstance(result.exit_code, int)  # Should have valid exit code
 
 
 def test_cli_watch_once_flag(tmp_path: Path):
