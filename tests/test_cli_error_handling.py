@@ -237,7 +237,7 @@ def test_cli_graph_large_wiki(tmp_path: Path):
     wiki = tmp_path / "wiki"
     wiki.mkdir()
     for i in range(10):
-        (wiki / f"page-{i}.md").write_text(f"# Page {i}\n\nLinks to [[page-{(i+1) % 10}]]")
+        (wiki / f"page-{i}.md").write_text(f"# Page {i}\n\nLinks to [[page-{(i + 1) % 10}]]")
 
     runner = CliRunner()
     result = runner.invoke(main, ["--root", str(tmp_path.parent), "graph", "--json"])

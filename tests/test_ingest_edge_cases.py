@@ -206,9 +206,7 @@ class TestIngestOrphanDetection:
                 "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
                 f"raw_file: missing-{i}.md\n---\n\nContent"
             )
-            (tmp_path / "wiki" / "sources" / f"orphan-{i}.md").write_text(
-                multi_orphan_fm
-            )
+            (tmp_path / "wiki" / "sources" / f"orphan-{i}.md").write_text(multi_orphan_fm)
 
         statuses = get_ingest_status(tmp_path)
         orphans = [s for s in statuses if s.status == "orphan"]
@@ -236,10 +234,10 @@ class TestIngestStatusCategories:
         (tmp_path / "wiki" / "sources" / "ingested.md").write_text(ingested_fm)
 
         # Incomplete: source page with no raw_file field
-        incomplete_fm = (
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n---"
+        incomplete_fm = "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n---"
+        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(
+            incomplete_fm
         )
-        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(incomplete_fm)
 
         # Orphan: source page referencing nonexistent raw file
         orphan_fm = (

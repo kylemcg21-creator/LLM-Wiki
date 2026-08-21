@@ -202,7 +202,7 @@ class TestLintLargeWiki:
 
         # Create 100 pages
         for i in range(100):
-            (wiki / f"page-{i}.md").write_text(f"# Page {i}\n\nContent [[page-{(i+1)%100}]]")
+            (wiki / f"page-{i}.md").write_text(f"# Page {i}\n\nContent [[page-{(i + 1) % 100}]]")
 
         import time
 
