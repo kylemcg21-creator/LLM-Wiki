@@ -221,19 +221,24 @@ class TestIngestStatusCategories:
         (tmp_path / "wiki" / "index.md").write_text("# Index")
 
         # Ingested: source page with matching raw file
-        (tmp_path / "wiki" / "sources" / "ingested.md").write_text(
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: ingested-file.md\n---"
+        ingested_fm = (
+            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "raw_file: ingested-file.md\n---"
         )
+        (tmp_path / "wiki" / "sources" / "ingested.md").write_text(ingested_fm)
 
         # Incomplete: source page with no raw_file field
-        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(
+        incomplete_fm = (
             "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n---"
         )
+        (tmp_path / "wiki" / "sources" / "incomplete.md").write_text(incomplete_fm)
 
         # Orphan: source page referencing nonexistent raw file
-        (tmp_path / "wiki" / "sources" / "orphan.md").write_text(
-            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: nonexistent.md\n---"
+        orphan_fm = (
+            "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "raw_file: nonexistent.md\n---"
         )
+        (tmp_path / "wiki" / "sources" / "orphan.md").write_text(orphan_fm)
 
         statuses = get_ingest_status(tmp_path)
 
@@ -310,9 +315,11 @@ class TestIngestLargeScale:
 
         (tmp_path / "wiki" / "sources").mkdir(parents=True)
         for i in range(50):
-            (tmp_path / "wiki" / "sources" / f"file-{i}.md").write_text(
-                f"---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\nraw_file: file-{i}.md\n---"
+            fm = (
+                "---\ntype: source\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+                f"raw_file: file-{i}.md\n---"
             )
+            (tmp_path / "wiki" / "sources" / f"file-{i}.md").write_text(fm)
 
         import time
 
