@@ -2,248 +2,201 @@
 
 from pathlib import Path
 
-from llm_wiki.new_page import render_from_template
+from llm_wiki.new_page import _slugify, _title_from_slug, create_page
 
 
-class TestNewPageBasicRendering:
-    """Test basic page rendering from templates."""
-
-    def test_render_entity_page(self, tmp_path: Path):
-        """Should render entity page with title."""
-        template = tmp_path / "entity.md"
-        template.write_text("# {{title}}\n\ntype: {{type}}\n\n")
-
-        result = render_from_template(template, title="Test Entity", type="entity")
-        assert "Test Entity" in result
-        assert "entity" in result
-
-    def test_render_concept_page(self, tmp_path: Path):
-        """Should render concept page with title."""
-        template = tmp_path / "concept.md"
-        template.write_text("# {{title}}\n\ntype: {{type}}\n\n")
-
-        result = render_from_template(template, title="Test Concept", type="concept")
-        assert "Test Concept" in result
-        assert "concept" in result
-
-    def test_render_source_page(self, tmp_path: Path):
-        """Should render source page with metadata."""
-        template = tmp_path / "source.md"
-        template.write_text("---\ntype: {{type}}\nraw_file: {{raw_file}}\n---\n# {{title}}\n")
-
-        result = render_from_template(template, type="source", raw_file="paper.md", title="Paper")
-        assert "raw_file: paper.md" in result
-
-
-class TestNewPageTemplateVariables:
-    """Test template variable substitution."""
-
-    def test_render_with_missing_variable(self, tmp_path: Path):
-        """Should handle missing variables gracefully."""
-        template = tmp_path / "test.md"
-        template.write_text("# {{title}}\n\n{{undefined_var}}")
-
-        result = render_from_template(template, title="Test")
-        assert "Test" in result
-        # Undefined variables may be left as-is or replaced with empty string
-
-    def test_render_with_special_chars_in_title(self, tmp_path: Path):
-        """Should handle special characters in title."""
-        template = tmp_path / "test.md"
-        template.write_text("# {{title}}")
-
-        result = render_from_template(template, title="Test & Entity (with parens)")
-        assert "Test & Entity (with parens)" in result
-
-    def test_render_with_unicode_title(self, tmp_path: Path):
-        """Should handle unicode characters in title."""
-        template = tmp_path / "test.md"
-        template.write_text("# {{title}}")
-
-        result = render_from_template(template, title="Café Résumé 日本語")
-        assert "Café" in result or "Café" in result  # May be normalized
-
-
-class TestNewPageComplexTemplates:
-    """Test rendering of complex templates."""
-
-    def test_render_template_with_frontmatter(self, tmp_path: Path):
-        """Should render frontmatter correctly."""
-        template = tmp_path / "entity.md"
-        template.write_text("---\ntype: {{type}}\ncreated: {{created}}\n---\n# {{title}}\n")
-
-        result = render_from_template(template, type="entity", created="2026-01-01", title="Entity")
-        assert "type: entity" in result
-        assert "created: 2026-01-01" in result
-
-    def test_render_template_with_multiline_content(self, tmp_path: Path):
-        """Should preserve multiline content."""
-        template = tmp_path / "test.md"
-        template.write_text("# {{title}}\n\nBullet points:\n- Item 1\n- Item 2\n")
-
-        result = render_from_template(template, title="Test")
-        assert "Item 1" in result
-        assert "Item 2" in result
-
-    def test_render_template_with_wikilinks(self, tmp_path: Path):
-        """Should preserve wikilinks in template."""
-        template = tmp_path / "test.md"
-        template.write_text("# {{title}}\n\nSee [[related-page]] for details")
-
-        result = render_from_template(template, title="Test")
-        assert "[[related-page]]" in result
-
-
-class TestNewPagePathGeneration:
-    """Test page path generation and creation."""
-
-    def test_create_entity_path(self, tmp_path: Path):
-        """Should create entity in entities/ directory."""
-        entities_dir = tmp_path / "entities"
-        entities_dir.mkdir()
-        template = tmp_path / "entity.md"
-        template.write_text("# {{title}}")
-
-        # Render and determine path
-        result = render_from_template(template, title="Test")
-        assert result is not None
-        # Path would be entities/test.md
-
-    def test_create_concept_path(self, tmp_path: Path):
-        """Should create concept in concepts/ directory."""
-        concepts_dir = tmp_path / "concepts"
-        concepts_dir.mkdir()
-        template = tmp_path / "concept.md"
-        template.write_text("# {{title}}")
-
-        result = render_from_template(template, title="Test")
-        assert result is not None
-
-    def test_create_nested_path_structure(self, tmp_path: Path):
-        """Should create nested directory structure if needed."""
-        # Path hierarchy: entities/subcategory/page.md
-        wiki = tmp_path / "wiki"
-        entities = wiki / "entities" / "companies"
-        entities.mkdir(parents=True)
-
-        template = entities.parent / "entity.md"
-        template.write_text("# {{title}}")
-
-        result = render_from_template(template, title="Company")
-        assert result is not None
-
-
-class TestNewPageSlugHandling:
+class TestSlugGeneration:
     """Test slug generation and normalization."""
 
-    def test_slug_with_spaces(self):
-        """Should convert spaces to dashes in slug."""
-        # This would be handled by the CLI/bootstrap
-        slug = "my entity name"
-        # Expected: my-entity-name
-        assert "my" in slug
+    def test_slugify_basic(self):
+        """Should convert spaces to dashes."""
+        assert _slugify("my entity name") == "my-entity-name"
 
-    def test_slug_with_special_chars(self):
-        """Should handle special characters in slug."""
-        slug = "entity-(deprecated)"
-        # May normalize to entity-deprecated or entity-deprecated
-        assert "entity" in slug
+    def test_slugify_uppercase(self):
+        """Should convert to lowercase."""
+        assert _slugify("MyEntity") == "myentity"
 
-    def test_slug_already_normalized(self):
-        """Should handle already-normalized slugs."""
-        slug = "already-normalized-slug"
-        assert slug == "already-normalized-slug"
+    def test_slugify_special_chars(self):
+        """Should remove special characters."""
+        result = _slugify("entity (deprecated)")
+        assert "entity" in result
+        assert "deprecated" in result
 
+    def test_slugify_multiple_dashes(self):
+        """Should collapse multiple dashes."""
+        result = _slugify("test  --  entity")
+        assert "--" not in result
 
-class TestNewPageOverwrite:
-    """Test overwrite behavior for existing pages."""
+    def test_slugify_empty_slug(self):
+        """Should reject empty slugs."""
+        assert _slugify("!!!") == ""
 
-    def test_overwrite_disabled_by_default(self, tmp_path: Path):
-        """Should not overwrite existing pages by default."""
-        existing = tmp_path / "page.md"
-        existing.write_text("# Existing")
+    def test_title_from_slug(self):
+        """Should generate title from slug."""
+        assert _title_from_slug("my-entity-name") == "My Entity Name"
 
-        template = tmp_path / "template.md"
-        template.write_text("# {{title}}")
+    def test_title_from_slug_single_word(self):
+        """Should handle single word slugs."""
+        assert _title_from_slug("entity") == "Entity"
 
-        # In actual use, this would raise an exception or return error
-        result = render_from_template(template, title="New")
-        assert result is not None  # Template renders, but file wouldn't be written
-
-    def test_overwrite_with_force_flag(self, tmp_path: Path):
-        """Should overwrite when explicitly requested."""
-        existing = tmp_path / "page.md"
-        existing.write_text("# Old Content")
-
-        template = tmp_path / "template.md"
-        template.write_text("# {{title}}")
-
-        result = render_from_template(template, title="New")
-        # With force=True, file would be overwritten
-        assert result is not None
+    def test_title_from_slug_with_dashes(self):
+        """Should capitalize each part."""
+        assert _title_from_slug("test-entity-page") == "Test Entity Page"
 
 
-class TestNewPageEmptyTemplate:
-    """Test handling of empty or minimal templates."""
+class TestCreatePageBasic:
+    """Test basic page creation."""
 
-    def test_empty_template(self, tmp_path: Path):
-        """Should handle empty template."""
-        template = tmp_path / "empty.md"
-        template.write_text("")
+    def test_create_entity_page(self, tmp_path: Path):
+        """Should create entity page."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
 
-        result = render_from_template(template, title="Test")
-        assert result == ""
+        result = create_page(tmp_path, page_type="entity", slug="test-entity", title="Test Entity")
+        assert result.path.exists()
+        assert "entities" in str(result.path)
 
-    def test_template_only_variables(self, tmp_path: Path):
-        """Should render template with only variables."""
-        template = tmp_path / "test.md"
-        template.write_text("{{title}}")
+    def test_create_concept_page(self, tmp_path: Path):
+        """Should create concept page."""
+        (tmp_path / "templates" / "concept.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "concept.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "concepts").mkdir(parents=True)
 
-        result = render_from_template(template, title="Test")
-        assert "Test" in result
+        result = create_page(tmp_path, page_type="concept", slug="test-concept")
+        assert result.path.exists()
+        assert "concepts" in str(result.path)
+
+    def test_create_source_page(self, tmp_path: Path):
+        """Should create source page."""
+        (tmp_path / "templates" / "source.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "source.md").write_text("---\ntype: source\n---\n")
+        (tmp_path / "wiki" / "sources").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="source", slug="test-source")
+        assert result.path.exists()
+        assert "sources" in str(result.path)
+
+    def test_create_answer_page(self, tmp_path: Path):
+        """Should create answer page."""
+        (tmp_path / "templates" / "answer.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "answer.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "answers").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="answer", slug="test-answer")
+        assert result.path.exists()
+        assert "answers" in str(result.path)
 
 
-class TestNewPageLargeTemplate:
-    """Test rendering of large templates."""
+class TestCreatePageWithForce:
+    """Test overwrite behavior."""
 
-    def test_large_template_rendering(self, tmp_path: Path):
-        """Should handle large templates."""
-        template = tmp_path / "large.md"
-        # Create large template with 1000 lines
-        lines = ["# {{title}}\n"]
-        for i in range(100):
-            lines.append(f"## Section {i}\n")
-            lines.append(f"Content for section {i}\n")
+    def test_create_fails_without_force(self, tmp_path: Path):
+        """Should fail when page exists without force."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+        existing = tmp_path / "wiki" / "entities" / "test.md"
+        existing.write_text("# Old")
 
-        template.write_text("".join(lines))
+        try:
+            create_page(tmp_path, page_type="entity", slug="test", force=False)
+            assert False, "Should have raised FileExistsError"
+        except FileExistsError:
+            pass
 
-        result = render_from_template(template, title="Large")
-        assert "Large" in result
-        assert "Section 0" in result
-        assert "Section 99" in result
+    def test_create_with_force_succeeds(self, tmp_path: Path):
+        """Should overwrite when force=True."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+        existing = tmp_path / "wiki" / "entities" / "test.md"
+        existing.write_text("# Old")
+
+        result = create_page(tmp_path, page_type="entity", slug="test", force=True)
+        assert result.created or result.path.exists()
 
 
-class TestNewPageDateVariables:
-    """Test date variable substitution."""
+class TestCreatePageErrors:
+    """Test error handling in page creation."""
 
-    def test_date_variable_substitution(self, tmp_path: Path):
-        """Should substitute date variables."""
-        template = tmp_path / "dated.md"
-        template.write_text("---\ncreated: {{created}}\n---\n# {{title}}\n")
+    def test_create_unknown_type(self, tmp_path: Path):
+        """Should reject unknown page types."""
+        try:
+            create_page(tmp_path, page_type="unknown", slug="test")
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Unknown page type" in str(e)
 
-        result = render_from_template(template, created="2026-08-22", title="Test")
-        assert "2026-08-22" in result
+    def test_create_empty_slug(self, tmp_path: Path):
+        """Should reject empty slugs."""
+        try:
+            create_page(tmp_path, page_type="entity", slug="")
+            assert False, "Should have raised ValueError"
+        except ValueError:
+            pass
 
-    def test_multiple_date_references(self, tmp_path: Path):
-        """Should handle multiple date references."""
-        template = tmp_path / "multi_date.md"
-        template.write_text("---\ncreated: {{created}}\nupdated: {{updated}}\n---\n# {{title}}\n")
+    def test_create_missing_template(self, tmp_path: Path):
+        """Should fail if template doesn't exist."""
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+        # No templates directory
 
-        result = render_from_template(
-            template,
-            created="2026-01-01",
-            updated="2026-08-22",
-            title="Test",
-        )
-        assert "2026-01-01" in result
-        assert "2026-08-22" in result
+        try:
+            create_page(tmp_path, page_type="entity", slug="test")
+            assert False, "Should have raised FileNotFoundError"
+        except FileNotFoundError:
+            pass
+
+
+class TestCreatePageNormalization:
+    """Test slug normalization during creation."""
+
+    def test_create_with_spaces_in_slug(self, tmp_path: Path):
+        """Should normalize spaces to dashes."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="entity", slug="my entity name")
+        assert "my-entity-name" in str(result.path)
+
+    def test_create_with_uppercase_slug(self, tmp_path: Path):
+        """Should normalize to lowercase."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="entity", slug="MyEntity")
+        assert "myentity" in str(result.path).lower()
+
+
+class TestCreatePageResult:
+    """Test NewPageResult attributes."""
+
+    def test_result_has_rel_path(self, tmp_path: Path):
+        """Result should have relative path."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="entity", slug="test")
+        assert result.rel_path
+        assert "entities" in result.rel_path
+
+    def test_result_has_absolute_path(self, tmp_path: Path):
+        """Result path should be absolute."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="entity", slug="test")
+        assert result.path.is_absolute()
+
+    def test_result_created_flag(self, tmp_path: Path):
+        """Result should indicate if page was created."""
+        (tmp_path / "templates" / "entity.md").parent.mkdir(parents=True)
+        (tmp_path / "templates" / "entity.md").write_text("# {{title}}\n")
+        (tmp_path / "wiki" / "entities").mkdir(parents=True)
+
+        result = create_page(tmp_path, page_type="entity", slug="test")
+        assert result.created is True
